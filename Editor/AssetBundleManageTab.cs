@@ -2,7 +2,9 @@
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using System.Collections.Generic;
-
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Linq;
 
 namespace AssetBundleBrowser
 {
@@ -94,9 +96,57 @@ namespace AssetBundleBrowser
 
             }
         }
+        
+        void RefreshBundleConfig()
+        {
+            var bundleRoot = "Assets/AppRes/";
+            int groupCount = 0;
+            int bundleCount = 0;
+            var groups = Directory.GetDirectories(bundleRoot, "*", SearchOption.TopDirectoryOnly);
+            foreach (var group in groups)
+            {
+                EditorUtility.DisplayCancelableProgressBar("update bundle config ...", group,
+                    (float) (++groupCount) / groups.Length);
+                var bundles = Directory.GetDirectories(group, "*", SearchOption.TopDirectoryOnly);
+                foreach (var bundle in bundles)
+                {
+                    ++bundleCount;
+                    var bundlePath = bundle.Replace("\\", "/");
+                    var bundleName = bundlePath.Replace(bundleRoot, "").ToLower() + ".bd";
+                    var assetBundle = AssetImporter.GetAtPath(bundlePath);
+                    if (assetBundle != null && assetBundle.assetBundleName != bundleName)
+                    {
+                        assetBundle.assetBundleName = bundleName;
+                        Debug.Log($"new bundle {bundleName}");
+                    }
+
+                    foreach (var f in Directory.GetFiles(bundle, "*", SearchOption.AllDirectories)
+                        .Where(i => !i.EndsWith(".meta")))
+                    {
+                        var assetImporter = AssetImporter.GetAtPath(f);
+                        if (assetImporter != null)
+                        {
+                            assetImporter.assetBundleName = bundleName;
+                            var assetTimeStamp = assetImporter.assetTimeStamp;
+                        }
+                    } // bundle
+                } //for group
+            } //for root
+            
+            var un = AssetDatabase.GetUnusedAssetBundleNames();
+            if(un.Length > 0)
+                Debug.Log($"rm unused bundle names: {string.Join(",", un)}");
+            
+            Debug.Log($"bundleCount:{bundleCount}");
+            AssetDatabase.RemoveUnusedAssetBundleNames();
+            
+            EditorUtility.ClearProgressBar();
+        }
 
         internal void ForceReloadData()
         {
+            RefreshBundleConfig();
+
             UpdateSelectedBundles(new List<AssetBundleModel.BundleInfo>());
             SetSelectedItems(new List<AssetBundleModel.AssetInfo>());
             m_BundleTree.SetSelection(new int[0]);
