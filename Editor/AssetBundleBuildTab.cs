@@ -51,6 +51,7 @@ namespace AssetBundleBrowser
 
         List<ToggleData> m_ToggleData;
         ToggleData m_ForceRebuild;
+        ToggleData m_AutoUpload;
         ToggleData m_CopyToStreaming;
         GUIContent m_TargetContent;
         GUIContent m_CompressionContent;
@@ -147,6 +148,11 @@ namespace AssetBundleBrowser
                 m_UserData.m_OnToggles,
                 BuildAssetBundleOptions.DryRunBuild));
 
+            m_AutoUpload = new ToggleData(
+                false,
+                "Auto Upload to oss",
+                "Will auto Upload asset bundles to aliyun oss.",
+                m_UserData.m_OnToggles);
 
             m_ForceRebuild = new ToggleData(
                 false,
@@ -185,10 +191,9 @@ namespace AssetBundleBrowser
                 if (tgt != m_UserData.m_BuildTarget)
                 {
                     m_UserData.m_BuildTarget = tgt;
-                    if(m_UserData.m_UseDefaultPath)
+                    // if(m_UserData.m_UseDefaultPath)
                     {
-                        m_UserData.m_OutputPath = "AssetBundles/";
-                        m_UserData.m_OutputPath += m_UserData.m_BuildTarget.ToString();
+                        m_UserData.m_OutputPath = "ab/" + m_UserData.m_BuildTarget.ToString();
                         //EditorUserBuildSettings.SetPlatformSettings(EditorUserBuildSettings.activeBuildTarget.ToString(), "AssetBundleOutputPath", m_OutputPath);
                     }
                 }
@@ -240,6 +245,18 @@ namespace AssetBundleBrowser
                         m_UserData.m_OnToggles.Remove(m_CopyToStreaming.content.text);
                     m_CopyToStreaming.state = newState;
                 }
+                newState = GUILayout.Toggle(
+                    m_AutoUpload.state,
+                    m_AutoUpload.content);
+                if (newState != m_AutoUpload.state)
+                {
+                    if (newState)
+                        m_UserData.m_OnToggles.Add(m_AutoUpload.content.text);
+                    else
+                        m_UserData.m_OnToggles.Remove(m_AutoUpload.content.text);
+                    m_AutoUpload.state = newState;
+                }
+
             }
 
             // advanced options
@@ -360,8 +377,62 @@ namespace AssetBundleBrowser
 
             AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
 
+            if (m_AutoUpload.state)
+            {
+                Execute("bash", "ab/upossAll.sh");
+            }
+
             if(m_CopyToStreaming.state)
                 DirectoryCopy(m_UserData.m_OutputPath, m_streamingPath);
+        }
+        
+        public static void Execute(string exe, string prmt)
+        {
+            EditorUtility.DisplayCancelableProgressBar(exe, prmt, 0.3f);
+            bool finished = false;
+            var process = new System.Diagnostics.Process();
+            var processing = 0f;
+            try
+            {
+                // UnityEngine.Debug.Log(exe + " " + prmt);
+                var pi = new System.Diagnostics.ProcessStartInfo(exe, prmt);
+                pi.WorkingDirectory = ".";
+                pi.RedirectStandardInput = false;
+                pi.RedirectStandardOutput = true;
+                pi.RedirectStandardError = true;
+                pi.UseShellExecute = false;
+                pi.CreateNoWindow = true;
+
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (string.IsNullOrEmpty(e.Data))
+                        return;
+                    UnityEngine.Debug.Log(e.Data);
+                };
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        UnityEngine.Debug.LogError(e.GetType() + ": " + e.Data);
+                };
+                process.Exited += (sender, e) =>
+                {
+                    UnityEngine.Debug.Log("Exit");
+                };
+
+                process.StartInfo = pi;
+                process.EnableRaisingEvents = true;
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                // process.WaitForExit();
+            }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogError("catch: " + e);
+            }
+
+            // UnityEngine.Debug.Log("finished: " + process.ExitCode);
+            EditorUtility.ClearProgressBar();
         }
 
         private static void DirectoryCopy(string sourceDirName, string destDirName)
@@ -417,41 +488,41 @@ namespace AssetBundleBrowser
             //iPhone = -1,          --deprecated
             //BB10 = -1,            --deprecated
             //MetroPlayer = -1,     --deprecated
-            StandaloneOSXUniversal = 2,
-            StandaloneOSXIntel = 4,
-            StandaloneWindows = 5,
-            WebPlayer = 6,
-            WebPlayerStreamed = 7,
+            OSX = 2,//StandaloneOSX
+            // OSX = 4,
+            Windows = 5,//StandaloneWindows
+            // WebPlayer = 6,
+            // WebPlayerStreamed = 7,
             iOS = 9,
-            PS3 = 10,
-            XBOX360 = 11,
+            // PS3 = 10,
+            // XBOX360 = 11,
             Android = 13,
-            StandaloneLinux = 17,
-            StandaloneWindows64 = 19,
-            WebGL = 20,
-            WSAPlayer = 21,
-            StandaloneLinux64 = 24,
-            StandaloneLinuxUniversal = 25,
-            WP8Player = 26,
-            StandaloneOSXIntel64 = 27,
-            BlackBerry = 28,
-            Tizen = 29,
-            PSP2 = 30,
-            PS4 = 31,
-            PSM = 32,
-            XboxOne = 33,
-            SamsungTV = 34,
-            N3DS = 35,
-            WiiU = 36,
-            tvOS = 37,
-            Switch = 38
+            // Linux = 17,
+            Windows64 = 19,//StandaloneWindows64
+            // WebGL = 20,
+            // WSAPlayer = 21,
+            // Linux64 = 24,
+            // Linux = 25,
+            // WP8Player = 26,
+            // OSX64 = 27,
+            // BlackBerry = 28,
+            // Tizen = 29,
+            // PSP2 = 30,
+            // PS4 = 31,
+            // PSM = 32,
+            // XboxOne = 33,
+            // SamsungTV = 34,
+            // N3DS = 35,
+            // WiiU = 36,
+            // tvOS = 37,
+            // Switch = 38
         }
 
         [System.Serializable]
         internal class BuildTabData
         {
             internal List<string> m_OnToggles;
-            internal ValidBuildTarget m_BuildTarget = ValidBuildTarget.StandaloneWindows;
+            internal ValidBuildTarget m_BuildTarget = ValidBuildTarget.Windows;
             internal CompressOptions m_Compression = CompressOptions.StandardCompression;
             internal string m_OutputPath = string.Empty;
             internal bool m_UseDefaultPath = true;

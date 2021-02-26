@@ -222,6 +222,7 @@ namespace AssetBundleBrowser
                 float panelLeft = m_HorizontalSplitterRect.x + k_SplitterWidth;
                 float panelWidth = m_VerticalSplitterRectRight.width - k_SplitterWidth * 2;
                 float searchHeight = 20f;
+                float bundleResourceRootHeight = 20;
                 float panelTop = m_Position.y + searchHeight;
                 float panelHeight = m_VerticalSplitterRectRight.y - panelTop;
                 OnGUISearchBar(new Rect(panelLeft, m_Position.y, panelWidth, searchHeight));

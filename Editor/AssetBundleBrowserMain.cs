@@ -49,7 +49,7 @@ namespace AssetBundleBrowser
         const float k_ToolbarPadding = 15;
         const float k_MenubarPadding = 32;
 
-        [MenuItem("Window/AssetBundle Browser", priority = 2050)]
+        [MenuItem("Window/AssetBundle", priority = 2050)]
         static void ShowWindow()
         {
             s_instance = null;
