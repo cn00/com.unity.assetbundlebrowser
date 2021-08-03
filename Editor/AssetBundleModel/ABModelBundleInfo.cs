@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
@@ -30,7 +30,7 @@ namespace AssetBundleBrowser.AssetBundleModel
         {
             get
             {
-                return AssetBundleBrowserMain.instance.m_ManageTab.hasSearch ? m_Bundle.m_Name.fullNativeName : m_Bundle.displayName;
+                return m_Bundle.displayName;
             }
         }
     }

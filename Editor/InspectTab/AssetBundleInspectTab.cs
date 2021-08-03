@@ -292,6 +292,7 @@ namespace AssetBundleBrowser
             var notAllowedExtensions = new string[] { ".meta", ".manifest", ".dll", ".cs", ".exe", ".js" };
             foreach (var file in Directory.GetFiles(path))
             {
+
                 var ext = Path.GetExtension(file);
                 if(!notAllowedExtensions.Contains(ext))
                 {
@@ -454,7 +455,6 @@ namespace AssetBundleBrowser
             }
 
             string extension = Path.GetExtension(path);
-
             string bundleName = path.Substring(0, path.Length - extension.Length);
 
             // Check if we have a record for this bundle
@@ -476,10 +476,31 @@ namespace AssetBundleBrowser
             if (null == bundle)
             {
                 // Load the bundle
-                bundle = AssetBundle.LoadFromFile(path);
-                if (null == bundle)
+                var streamb = new MemoryStream(File.ReadAllBytes(path));
+                long headerLength  = MaskedHeaderStreamUtility.DefaultHeaderLength;
+                var ct = MaskedHeaderStreamUtility.GetCryptType(streamb);
+                switch (ct)
                 {
-                    return null;
+                    case MaskedHeaderStreamUtility.CryptType.Version1:
+                        headerLength = MaskedHeaderStreamUtility.DefaultHeaderLength;
+                        break;
+                    case MaskedHeaderStreamUtility.CryptType.Version1Full:
+                        headerLength = streamb.Length;
+                        break;
+                    case MaskedHeaderStreamUtility.CryptType.Raw:
+                    default:
+                        streamb.Dispose();
+                        return null;
+                }
+
+                var bi = path.LastIndexOf('/') + 1;
+                string mask = path.Substring(bi, path.Length - extension.Length - bi);
+                using (var stream = new MaskedHeaderStream(streamb, headerLength, mask))
+                {
+                    bundle	= AssetBundle.LoadFromStream( stream );
+                    UnityEngine.Debug.Assert(bundle != null, $"AssetBundle.LoadFromMemory failed: {path}" );
+                    if(bundle == null)
+                        return null;
                 }
 
                 m_loadedAssetBundles[bundleName] = new AssetBundleRecord(path, bundle);
